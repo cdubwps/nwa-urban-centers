@@ -162,7 +162,7 @@ function drawCenters(percentile){
   for(const ids of clusters){
     if(ids.length<minC) continue;
     const pts=turf.featureCollection(ids.map(i=>turf.centroid(dense[i])));
-    let hull=turf.convexHull(pts);
+    let hull=turf.convex(pts);
     if(!hull) continue;
     hull=turf.buffer(hull,0.55,{units:'kilometers',steps:12});
     hull.properties={
@@ -206,7 +206,7 @@ function refresh(){
     console.error(err);
     document.getElementById('stats').innerHTML=
       '<b>Data load error.</b><br>'+err.message+
-      '<br><br>The map needs internet access to the Census/ArcGIS layer.';
+      '<br><br>The Census/ArcGIS layer could not be processed. Check the browser console for details.';
   }
 })();
 
