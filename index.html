@@ -6,32 +6,229 @@
 
     <title>Northwest Arkansas Urban Centers</title>
 
+    <!-- Leaflet CSS -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
     <style>
+
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
         body {
             font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-title {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 5px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.3);
+        }
+
+        .map-title h1 {
             margin: 0;
-            padding: 40px;
-            background: #f5f5f5;
+            font-size: 20px;
+        }
+
+        .map-title p {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .city-label {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            font-weight: bold;
+            font-size: 14px;
             color: #222;
         }
 
-        h1 {
-            margin-top: 0;
-        }
-
-        p {
-            font-size: 18px;
-        }
     </style>
 </head>
 
 <body>
 
-    <h1>Northwest Arkansas Urban Centers</h1>
+    <div id="map"></div>
 
-    <p>
-        This is the beginning of the Northwest Arkansas urban centers map.
-    </p>
+    <!-- Leaflet JavaScript -->
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+
+    <script>
+
+        // -----------------------------------------
+        // CREATE THE MAP
+        // -----------------------------------------
+
+        const map = L.map('map');
+
+
+        // -----------------------------------------
+        // OPENSTREETMAP BASE MAP
+        // -----------------------------------------
+
+        L.tileLayer(
+            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            {
+                maxZoom: 19,
+                attribution:
+                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }
+        ).addTo(map);
+
+
+        // -----------------------------------------
+        // NORTHWEST ARKANSAS VIEW
+        // -----------------------------------------
+
+        const nwaBounds = [
+            [35.85, -94.65],
+            [36.55, -93.45]
+        ];
+
+        map.fitBounds(nwaBounds);
+
+
+        // -----------------------------------------
+        // CITY LOCATIONS
+        // -----------------------------------------
+
+        const cities = [
+
+            {
+                name: "Fayetteville",
+                lat: 36.0822,
+                lon: -94.1719
+            },
+
+            {
+                name: "Springdale",
+                lat: 36.1867,
+                lon: -94.1288
+            },
+
+            {
+                name: "Rogers",
+                lat: 36.3320,
+                lon: -94.1185
+            },
+
+            {
+                name: "Bentonville",
+                lat: 36.3729,
+                lon: -94.2088
+            },
+
+            {
+                name: "Bella Vista",
+                lat: 36.4806,
+                lon: -94.2730
+            },
+
+            {
+                name: "Centerton",
+                lat: 36.3598,
+                lon: -94.2852
+            },
+
+            {
+                name: "Lowell",
+                lat: 36.2554,
+                lon: -94.1308
+            },
+
+            {
+                name: "Tontitown",
+                lat: 36.1770,
+                lon: -94.2330
+            },
+
+            {
+                name: "Johnson",
+                lat: 36.1334,
+                lon: -94.1650
+            },
+
+            {
+                name: "Farmington",
+                lat: 36.0426,
+                lon: -94.2471
+            },
+
+            {
+                name: "Pea Ridge",
+                lat: 36.4537,
+                lon: -94.1185
+            },
+
+            {
+                name: "Cave Springs",
+                lat: 36.2648,
+                lon: -94.2310
+            }
+
+        ];
+
+
+        // -----------------------------------------
+        // ADD CITY LABELS
+        // -----------------------------------------
+
+        cities.forEach(city => {
+
+            L.marker(
+                [city.lat, city.lon],
+                {
+                    icon: L.divIcon({
+                        className: 'city-label',
+                        html: city.name,
+                        iconSize: null
+                    })
+                }
+            ).addTo(map);
+
+        });
+
+
+        // -----------------------------------------
+        // TITLE
+        // -----------------------------------------
+
+        const title = L.control({
+            position: 'topright'
+        });
+
+        title.onAdd = function () {
+
+            const div = L.DomUtil.create(
+                'div',
+                'map-title'
+            );
+
+            div.innerHTML = `
+                <h1>Northwest Arkansas</h1>
+                <p>Urban Centers Project</p>
+            `;
+
+            return div;
+        };
+
+        title.addTo(map);
+
+    </script>
 
 </body>
 </html>
