@@ -1,133 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Northwest Arkansas Urban Centers</title>
-
-    <!-- Leaflet CSS -->
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-
-    <style>
-
-        html, body {
-            height: 100%;
-            margin: 0;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-        }
-
-        #map {
-            width: 100%;
-            height: 100%;
-        }
-
-        .map-title {
-            background: white;
-            padding: 12px 16px;
-            border-radius: 5px;
-            box-shadow: 0 1px 5px rgba(0,0,0,0.3);
-        }
-
-        .map-title h1 {
-            margin: 0;
-            font-size: 20px;
-        }
-
-        .map-title p {
-            margin: 4px 0 0;
-            font-size: 13px;
-            color: #555;
-        }
-
-        .city-label {
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            font-weight: bold;
-            font-size: 14px;
-            color: #222;
-        }
-
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Northwest Arkansas Urban Centers</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+html,body,#map{height:100%;margin:0}
+body{font-family:Arial,sans-serif}
+#map{width:100%}
+.panel{
+  background:rgba(255,255,255,.96); padding:12px 14px; border-radius:7px;
+  box-shadow:0 1px 6px rgba(0,0,0,.3); width:290px;
+}
+.panel h1{font-size:19px;margin:0 0 4px}
+.panel p{font-size:12px;color:#555;margin:3px 0 10px;line-height:1.35}
+.panel label{font-size:12px;font-weight:bold}
+.panel input{width:100%}
+.small{font-size:11px;color:#555}
+.legend{line-height:18px;font-size:11px}
+.swatch{display:inline-block;width:14px;height:14px;margin-right:5px;vertical-align:-2px;border:1px solid #999}
+</style>
 </head>
-
 <body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@turf/turf@7/turf.min.js"></script>
+<script>
+const JOBS = {"05007020102":1605,"05007020103":867,"05007020104":150,"05007020201":7808,"05007020203":1141,"05007020205":540,"05007020206":3032,"05007020301":3149,"05007020302":1835,"05007020304":1033,"05007020305":2991,"05007020401":4684,"05007020402":1270,"05007020404":440,"05007020405":14740,"05007020501":5225,"05007020503":8386,"05007020504":2645,"05007020604":10217,"05007020605":3908,"05007020606":20762,"05007020607":2075,"05007020608":140,"05007020701":333,"05007020703":554,"05007020704":521,"05007020801":196,"05007020803":425,"05007020805":622,"05007020806":862,"05007020903":436,"05007020904":669,"05007020905":783,"05007020906":657,"05007021001":798,"05007021003":2533,"05007021004":2219,"05007021101":4195,"05007021102":1268,"05007021201":1716,"05007021202":1951,"05007021304":3232,"05007021305":1436,"05007021306":3691,"05007021308":469,"05007021312":1081,"05007021313":1018,"05007021314":479,"05007021315":13123,"05007021316":761,"05007021317":539,"05007021404":459,"05007021405":117,"05007021406":3693,"05007021407":614,"05007021408":616,"05007021409":323,"05143010101":2852,"05143010107":2060,"05143010108":928,"05143010109":306,"05143010110":473,"05143010111":595,"05143010112":214,"05143010113":1204,"05143010114":5651,"05143010115":1851,"05143010201":3330,"05143010202":6688,"05143010303":1021,"05143010304":4120,"05143010305":1370,"05143010306":178,"05143010307":2120,"05143010401":416,"05143010402":1166,"05143010404":1670,"05143010405":5703,"05143010501":2873,"05143010508":383,"05143010510":2590,"05143010511":7707,"05143010512":3187,"05143010513":645,"05143010514":949,"05143010515":1202,"05143010516":1526,"05143010517":992,"05143010518":4025,"05143010519":2455,"05143010520":608,"05143010521":1500,"05143010601":523,"05143010602":1505,"05143010703":1040,"05143010704":374,"05143010705":8483,"05143010706":3024,"05143011002":338,"05143011003":565,"05143011004":272,"05143011005":682,"05143011006":1702,"05143011103":166,"05143011104":1539,"05143011105":3751,"05143011106":668,"05143011107":12555,"05143011200":7940,"05143011301":2289,"05143011302":5856};
 
-    <div id="map"></div>
+const map = L.map('map');
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:19,
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
 
-    <!-- Leaflet JavaScript -->
-    <script
-        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-    </script>
+const nwaBounds=[[35.85,-94.65],[36.55,-93.45]];
+map.fitBounds(nwaBounds);
 
-    <script>
+let tracts=[], tractLayer=null, centersLayer=null;
+let combinedValues=[];
 
-        // -----------------------------------------
-        // CREATE THE MAP
-        // -----------------------------------------
+const panel=L.control({position:'topright'});
+panel.onAdd=function(){
+  const d=L.DomUtil.create('div','panel');
+  d.innerHTML=`
+    <h1>Northwest Arkansas</h1>
+    <p>Urban Centers — 2023 ACS population + 2023 LODES workplace jobs</p>
+    <label>Urban-center density threshold: <span id="thresholdLabel">loading…</span></label>
+    <input id="threshold" type="range" min="0" max="100" value="85" step="1">
+    <div class="small">Percentile of combined residents + workplace jobs per square mile.</div>
+    <br>
+    <label>Minimum connected tracts</label>
+    <input id="minCluster" type="range" min="1" max="6" value="2" step="1">
+    <div class="small"><span id="minClusterLabel">2</span> adjacent dense tracts minimum.</div>
+    <hr>
+    <div id="stats" class="small">Loading Census tracts…</div>
+  `;
+  L.DomEvent.disableClickPropagation(d);
+  return d;
+};
+panel.addTo(map);
 
-        const map = L.map('map');
+function color(v, q){
+  if(v>=q[4]) return '#7b1fa2';
+  if(v>=q[3]) return '#9c27b0';
+  if(v>=q[2]) return '#ba68c8';
+  if(v>=q[1]) return '#ce93d8';
+  if(v>=q[0]) return '#e1bee7';
+  return '#f5f5f5';
+}
+function quantiles(vals){
+  const a=[...vals].sort((x,y)=>x-y);
+  return [0.5,0.75,0.9,0.95,0.98].map(p=>a[Math.floor((a.length-1)*p)]);
+}
+function fmt(x){return Math.round(x).toLocaleString();}
+function areaSqMi(m2){return m2/2589988.110336;}
 
+async function fetchCountyTracts(prefix){
+  const base='https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/ACS_Total_Population_Boundaries/FeatureServer/2/query';
+  let out=[], offset=0;
+  while(true){
+    const params=new URLSearchParams({
+      where:`GEOID LIKE '${prefix}%'`,
+      outFields:'GEOID,NAME,ALAND,AWATER,B01001_001E',
+      returnGeometry:'true',
+      outSR:'4326',
+      f:'geojson',
+      resultOffset:String(offset),
+      resultRecordCount:'50'
+    });
+    const r=await fetch(base+'?'+params.toString());
+    if(!r.ok) throw new Error('Census layer request failed');
+    const gj=await r.json();
+    out.push(...gj.features);
+    if(!gj.properties?.exceededTransferLimit || gj.features.length<50) break;
+    offset+=50;
+  }
+  return out;
+}
 
-        // -----------------------------------------
-        // OPENSTREETMAP BASE MAP
-        // -----------------------------------------
+function buildMetrics(features){
+  return features.map(f=>{
+    const p=f.properties;
+    const pop=Number(p.B01001_001E)||0;
+    const jobs=Number(JOBS[p.GEOID])||0;
+    const land=areaSqMi(Number(p.ALAND)||0);
+    const popDen=land?pop/land:0;
+    const jobDen=land?jobs/land:0;
+    return {...f, properties:{...p,pop,jobs,land,popDen,jobDen,combinedDen:popDen+jobDen}};
+  });
+}
 
-        L.tileLayer(
-            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            {
-                maxZoom: 19,
-                attribution:
-                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }
-        ).addTo(map);
+function drawTracts(){
+  if(tractLayer) map.removeLayer(tractLayer);
+  const qs=quantiles(combinedValues);
+  tractLayer=L.geoJSON(tracts,{
+    style:f=>({color:'#999',weight:.45,fillColor:color(f.properties.combinedDen,qs),fillOpacity:.38}),
+    onEachFeature:(f,l)=>{
+      const p=f.properties;
+      l.bindPopup(`<b>${p.NAME}</b><br>
+        Population: ${fmt(p.pop)}<br>
+        Workplace jobs: ${fmt(p.jobs)}<br>
+        Land area: ${p.land.toFixed(2)} sq mi<br>
+        Population density: ${fmt(p.popDen)}/sq mi<br>
+        Job density: ${fmt(p.jobDen)}/sq mi<br>
+        <b>Combined activity density: ${fmt(p.combinedDen)}/sq mi</b>`);
+    }
+  }).addTo(map);
+}
 
+function connectedClusters(dense){
+  const remaining=new Set(dense.map((_,i)=>i));
+  const clusters=[];
+  while(remaining.size){
+    const start=remaining.values().next().value;
+    remaining.delete(start);
+    const stack=[start], c=[start];
+    while(stack.length){
+      const i=stack.pop();
+      for(const j of [...remaining]){
+        let touch=false;
+        try{ touch=turf.booleanIntersects(dense[i],dense[j]); }catch(e){}
+        if(touch){ remaining.delete(j); stack.push(j); c.push(j); }
+      }
+    }
+    clusters.push(c);
+  }
+  return clusters;
+}
 
-        // -----------------------------------------
-        // NORTHWEST ARKANSAS VIEW
-        // -----------------------------------------
+function drawCenters(percentile){
+  if(centersLayer) map.removeLayer(centersLayer);
+  const sorted=[...combinedValues].sort((a,b)=>a-b);
+  const threshold=sorted[Math.floor((sorted.length-1)*percentile/100)];
+  document.getElementById('thresholdLabel').textContent=fmt(threshold)+'/sq mi ('+percentile+'th pct)';
+  const dense=tracts.filter(f=>f.properties.combinedDen>=threshold);
+  const clusters=connectedClusters(dense);
+  const minC=Number(document.getElementById('minCluster').value);
+  const centerFeatures=[];
+  for(const ids of clusters){
+    if(ids.length<minC) continue;
+    const pts=turf.featureCollection(ids.map(i=>turf.centroid(dense[i])));
+    let hull=turf.convexHull(pts);
+    if(!hull) continue;
+    hull=turf.buffer(hull,0.55,{units:'kilometers',steps:12});
+    hull.properties={
+      tracts:ids.length,
+      population:ids.reduce((s,i)=>s+dense[i].properties.pop,0),
+      jobs:ids.reduce((s,i)=>s+dense[i].properties.jobs,0),
+      density:Math.max(...ids.map(i=>dense[i].properties.combinedDen))
+    };
+    centerFeatures.push(hull);
+  }
+  centersLayer=L.geoJSON(turf.featureCollection(centerFeatures),{
+    style:{color:'#6a1b9a',weight:2,fillColor:'#ab47bc',fillOpacity:.25},
+    onEachFeature:(f,l)=>{
+      const p=f.properties;
+      l.bindPopup(`<b>Urban center candidate</b><br>
+        Connected dense tracts: ${p.tracts}<br>
+        Population: ${fmt(p.population)}<br>
+        Workplace jobs: ${fmt(p.jobs)}<br>
+        Peak tract activity density: ${fmt(p.density)}/sq mi`);
+    }
+  }).addTo(map);
+  document.getElementById('stats').innerHTML=
+    `<b>${centerFeatures.length}</b> urban-center candidates<br>`+
+    `<b>${dense.length}</b> tracts above threshold<br>`+
+    `Threshold: <b>${fmt(threshold)}</b> residents + jobs/sq mi`;
+}
 
-        const nwaBounds = [
-            [35.85, -94.65],
-            [36.55, -93.45]
-        ];
+function refresh(){
+  drawCenters(Number(document.getElementById('threshold').value));
+  document.getElementById('minClusterLabel').textContent=document.getElementById('minCluster').value;
+}
 
-        map.fitBounds(nwaBounds);
+(async()=>{
+  try{
+    const [b,w]=await Promise.all([fetchCountyTracts('05007'),fetchCountyTracts('05143')]);
+    tracts=buildMetrics([...b,...w]);
+    combinedValues=tracts.map(f=>f.properties.combinedDen).filter(Number.isFinite);
+    drawTracts();
+    refresh();
+  }catch(err){
+    console.error(err);
+    document.getElementById('stats').innerHTML=
+      '<b>Data load error.</b><br>'+err.message+
+      '<br><br>The map needs internet access to the Census/ArcGIS layer.';
+  }
+})();
 
+document.addEventListener('input',e=>{
+  if(e.target.id==='threshold'||e.target.id==='minCluster') refresh();
+});
 
-        // -----------------------------------------
-        // TITLE
-        // -----------------------------------------
-
-        const title = L.control({
-            position: 'topright'
-        });
-
-        title.onAdd = function () {
-
-            const div = L.DomUtil.create(
-                'div',
-                'map-title'
-            );
-
-            div.innerHTML = `
-                <h1>Northwest Arkansas</h1>
-                <p>Urban Centers Project</p>
-            `;
-
-            return div;
-        };
-
-        title.addTo(map);
-
-    </script>
-
+const legend=L.control({position:'bottomright'});
+legend.onAdd=function(){
+  const d=L.DomUtil.create('div','panel legend');
+  d.innerHTML='<b>Map layers</b><br>'+
+    '<span class="swatch" style="background:#e1bee7"></span>Higher tract activity density<br>'+
+    '<span class="swatch" style="background:#ab47bc;opacity:.25"></span>Urban-center candidate';
+  return d;
+};
+legend.addTo(map);
+</script>
 </body>
 </html>
